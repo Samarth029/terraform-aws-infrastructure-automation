@@ -1,0 +1,14 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+*.tfplan
+crash.log
+crash.*.log
+.env
+
+# Private keys and crash dumps
+*.pem
+*.key
+*.tfstate.backup
