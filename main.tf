@@ -123,3 +123,24 @@ resource "aws_route_table_association" "public_b" {
   route_table_id = aws_route_table.public.id
 }
 
+
+# Security group for a future public web server
+resource "aws_security_group" "web" {
+  name        = "${var.project_name}-web-sg"
+  description = "Allow HTTP traffic to the public web server"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "Allow HTTP from the internet"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name    = "${var.project_name}-web-sg"
+    Project = var.project_name
+  }
+}
+

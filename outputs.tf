@@ -38,3 +38,8 @@ output "private_route_table_id" {
   description = "ID of the private route table"
   value       = aws_route_table.private.id
 }
+
+output "web_security_group_id" {
+  description = "ID of the security group for the public web server"
+  value       = aws_security_group.web.id
+}
