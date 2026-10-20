@@ -54,3 +54,72 @@ resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id
 }
+
+
+# Create a second public subnet in another Availability Zone
+resource "aws_subnet" "public_b" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "ap-south-1b"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name    = "${var.project_name}-public-subnet-b"
+    Project = var.project_name
+  }
+}
+
+# Create a private subnet in the first Availability Zone
+resource "aws_subnet" "private_a" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.11.0/24"
+  availability_zone       = "ap-south-1a"
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name    = "${var.project_name}-private-subnet-a"
+    Project = var.project_name
+  }
+}
+
+# Create a private subnet in the second Availability Zone
+resource "aws_subnet" "private_b" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.12.0/24"
+  availability_zone       = "ap-south-1b"
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name    = "${var.project_name}-private-subnet-b"
+    Project = var.project_name
+  }
+}
+
+# Create a private route table with no direct internet route
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name    = "${var.project_name}-private-rt"
+    Project = var.project_name
+  }
+}
+
+# Associate the first private subnet with the private route table
+resource "aws_route_table_association" "private_a" {
+  subnet_id      = aws_subnet.private_a.id
+  route_table_id = aws_route_table.private.id
+}
+
+# Associate the second private subnet with the private route table
+resource "aws_route_table_association" "private_b" {
+  subnet_id      = aws_subnet.private_b.id
+  route_table_id = aws_route_table.private.id
+}
+
+
+resource "aws_route_table_association" "public_b" {
+  subnet_id      = aws_subnet.public_b.id
+  route_table_id = aws_route_table.public.id
+}
+
