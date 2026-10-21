@@ -72,7 +72,7 @@ flowchart TB
 terraform-aws-infrastructure-automation/
 |-- .github/
 |   `-- workflows/
-|       `-- terraform-checks.yml
+|       `-- terraform-ci.yml
 |-- modules/
 |   |-- network/
 |   |   |-- main.tf
@@ -145,6 +145,33 @@ Always review a plan before approving an apply. Applying Terraform can create, m
 - Avoid exposing SSH to the entire internet.
 - Restrict network traffic to what the workload requires.
 - Do not transmit sensitive information through the sample HTTP website.
+
+## Security Scanning and Findings
+
+This project uses Checkov in GitHub Actions to scan Terraform configuration for common AWS security misconfigurations.
+
+The CI security scan currently runs with `--soft-fail` so findings can be reviewed before security policies are made blocking.
+
+### Verified Security Controls
+
+- EC2 root EBS volume encryption is enabled.
+- EC2 Instance Metadata Service Version 2 (IMDSv2) is required.
+- The EC2 instance uses the `EC2-SSM-Role` instance profile.
+- The VPC default security group is restricted.
+- The web security group allows inbound HTTP on port 80 and outbound HTTPS on port 443.
+
+### Findings Under Review
+
+- **CKV2_AWS_5 - Security group attachment:** Checkov reports that the web security group is not attached to another resource. The live EC2 configuration confirms that the security group is attached, and Terraform state tracks the same security group ID. The cause of the Checkov finding is still under investigation.
+- **CKV_AWS_88 - Public EC2 IP:** The instance has a public IP for direct access to the demonstration website.
+- **CKV_AWS_260 - Public HTTP ingress:** Port 80 is intentionally open to serve the sample website. HTTP does not encrypt traffic.
+- **CKV_AWS_130 - Public subnet IP assignment:** Public subnets currently allow automatic public IP assignment; this setting is under review.
+- **CKV_AWS_135 - EBS optimization:** Compatibility and configuration are under review.
+- **CKV_AWS_126 - Detailed monitoring:** Deferred pending cost assessment.
+- **CKV2_AWS_11 - VPC Flow Logs:** Deferred pending cost assessment.
+
+Findings are reviewed individually rather than blindly suppressed. Changes to existing AWS resources are made only after reviewing the Terraform plan and considering availability, security, and cost.
+
 
 ## Cost Considerations
 
