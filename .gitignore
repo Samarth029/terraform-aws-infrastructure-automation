@@ -12,3 +12,8 @@ crash.*.log
 *.pem
 *.key
 *.tfstate.backup
+# Local backups - never commit
+*.bak
+
+# Saved Terraform plan files - never commit
+tfplan
