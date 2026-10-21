@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   terraform-checks:
-    name: Terraform Format and Validate
+    name: Terraform Format, Validate and Security Scan
     runs-on: ubuntu-latest
 
     steps:
@@ -37,3 +37,9 @@ jobs:
 
       - name: Validate Terraform configuration
         run: terraform validate
+
+      - name: Install Checkov
+        run: python -m pip install --disable-pip-version-check checkov==3.3.29
+
+      - name: Scan Terraform for security issues
+        run: checkov --directory . --framework terraform --soft-fail --compact
