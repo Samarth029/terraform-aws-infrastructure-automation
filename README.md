@@ -25,7 +25,7 @@ flowchart TB
     subgraph VPC["AWS VPC - 10.0.0.0/16"]
         subgraph PublicA["Public Subnet A - 10.0.1.0/24"]
             SG[Web Security Group]
-            EC2[EC2 t3.micro<br/>Apache Web Server]
+            EC2["EC2 t3.micro<br/>Apache Web Server"]
             SG --> EC2
         end
 
@@ -51,8 +51,9 @@ flowchart TB
 
     class EC2,SG,IGW active
     class PUBB,PRIVA,PRIVB planned
+```
 
-The current deployment uses one EC2 instance. An Application Load Balancer, Auto Scaling Group, database, NAT Gateway, and HTTPS are not currently implemented.
+**Current deployment:** One EC2 instance serves the sample website over HTTP. The other subnets are configured but do not currently host workloads. An Application Load Balancer, Auto Scaling Group, database, NAT Gateway, and HTTPS endpoint are not currently deployed.
 
 ## Technologies Used
 
@@ -63,28 +64,33 @@ The current deployment uses one EC2 instance. An Application Load Balancer, Auto
 - AWS CLI
 - Git and GitHub
 - Windows PowerShell
+- GitHub Actions
 
 ## Project Structure
 
 ```text
 terraform-aws-infrastructure-automation/
-|-- main.tf
-|-- providers.tf
-|-- variables.tf
-|-- outputs.tf
-|-- versions.tf
+|-- .github/
+|   `-- workflows/
+|       `-- terraform-checks.yml
+|-- modules/
+|   |-- network/
+|   |   |-- main.tf
+|   |   `-- outputs.tf
+|   |-- security/
+|   |   |-- main.tf
+|   |   `-- outputs.tf
+|   `-- compute/
+|       |-- main.tf
+|       `-- outputs.tf
 |-- .gitignore
+|-- .terraform.lock.hcl
+|-- main.tf
+|-- outputs.tf
+|-- providers.tf
 |-- terraform.tfvars.example
-`-- modules/
-    |-- network/
-    |   |-- main.tf
-    |   `-- outputs.tf
-    |-- security/
-    |   |-- main.tf
-    |   `-- outputs.tf
-    `-- compute/
-        |-- main.tf
-        `-- outputs.tf
+|-- variables.tf
+`-- versions.tf
 ```
 
 ## Terraform Modules
@@ -111,20 +117,20 @@ Configure the AWS CLI using a dedicated IAM identity with least-privilege permis
 
 Format Terraform files:
 
-```powershell
+```bash
 terraform fmt -recursive
 ```
 
 Initialize and validate the configuration:
 
-```powershell
+```bash
 terraform init
 terraform validate
 ```
 
 Preview proposed infrastructure changes:
 
-```powershell
+```bash
 terraform plan
 ```
 
@@ -150,12 +156,11 @@ Review running resources and AWS billing after testing.
 
 ## Future Improvements
 
-- Add GitHub Actions for automated Terraform formatting and validation.
-- Add an architecture diagram and deployment screenshots.
 - Configure secure remote Terraform state storage and state locking.
 - Improve module documentation and variable configuration.
 - Explore an Application Load Balancer and Auto Scaling Group.
 - Explore a private database tier, HTTPS, monitoring, and alerting.
+- Add deployment screenshots to document the project.
 
 ## Learning Outcomes
 
@@ -167,5 +172,4 @@ Review running resources and AWS billing after testing.
 - Security group configuration
 - Terraform outputs and state-aware refactoring
 - Git version control and GitHub
-
-GitHub: https://github.com/Samarth029
+- GitHub Actions for automated Terraform formatting and validation
