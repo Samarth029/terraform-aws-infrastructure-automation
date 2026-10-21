@@ -16,6 +16,42 @@ This project demonstrates reusable Terraform modules, AWS network design, EC2 pr
 - **Security group:** Allows inbound HTTP traffic on port 80.
 - **EC2:** Runs an Apache web server serving a sample HTML page.
 
+### Architecture Diagram
+
+```mermaid
+flowchart TB
+    Internet([Internet]) -->|HTTP : 80| IGW[Internet Gateway]
+
+    subgraph VPC["AWS VPC - 10.0.0.0/16"]
+        subgraph PublicA["Public Subnet A - 10.0.1.0/24"]
+            SG[Web Security Group]
+            EC2[EC2 t3.micro<br/>Apache Web Server]
+            SG --> EC2
+        end
+
+        subgraph PublicB["Public Subnet B - 10.0.2.0/24"]
+            PUBB[Available public subnet]
+        end
+
+        subgraph PrivateA["Private Subnet A - 10.0.11.0/24"]
+            PRIVA[Reserved for future workloads]
+        end
+
+        subgraph PrivateB["Private Subnet B - 10.0.12.0/24"]
+            PRIVB[Reserved for future workloads]
+        end
+
+        IGW --> PublicA
+    end
+
+    EC2 --> Website[Sample HTTP Website]
+
+    classDef active fill:#d9ead3,stroke:#38761d,color:#000
+    classDef planned fill:#eeeeee,stroke:#666666,color:#000
+
+    class EC2,SG,IGW active
+    class PUBB,PRIVA,PRIVB planned
+
 The current deployment uses one EC2 instance. An Application Load Balancer, Auto Scaling Group, database, NAT Gateway, and HTTPS are not currently implemented.
 
 ## Technologies Used
