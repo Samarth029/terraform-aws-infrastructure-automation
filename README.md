@@ -162,7 +162,7 @@ The CI security scan currently runs with `--soft-fail` so findings can be review
 
 ### Findings Under Review
 
-- **CKV2_AWS_5 - Security group attachment:** Checkov reports that the web security group is not attached to another resource. The live EC2 configuration confirms that the security group is attached, and Terraform state tracks the same security group ID. The cause of the Checkov finding is still under investigation.
+- **CKV2_AWS_5 - Security group attachment:** Checkov 3.3.29 reports that the web security group is not attached to another resource. The Terraform configuration passes `module.security.web_security_group_id` into the compute module, and the EC2 resource uses it in `vpc_security_group_ids`. The live EC2 configuration and Terraform state confirm the same security group ID is attached. The finding remains documented as a likely static-analysis limitation; no infrastructure change is planned based on this finding alone.
 - **CKV_AWS_88 - Public EC2 IP:** The instance has a public IP for direct access to the demonstration website.
 - **CKV_AWS_260 - Public HTTP ingress:** Port 80 is intentionally open to serve the sample website. HTTP does not encrypt traffic.
 - **CKV_AWS_130 - Public subnet IP assignment:** Public subnets currently allow automatic public IP assignment; this setting is under review.
