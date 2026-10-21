@@ -166,7 +166,7 @@ The CI security scan currently runs with `--soft-fail` so findings can be review
 - **CKV_AWS_88 - Public EC2 IP:** The instance has a public IP for direct access to the demonstration website.
 - **CKV_AWS_260 - Public HTTP ingress:** Port 80 is intentionally open to serve the sample website. HTTP does not encrypt traffic.
 - **CKV_AWS_130 - Public subnet IP assignment:** Public subnets currently allow automatic public IP assignment; this setting is under review.
-- **CKV_AWS_135 - EBS optimization:** Compatibility and configuration are under review.
+- **CKV_AWS_135 - EBS optimization:** Checkov reports that EBS optimization is not explicitly enabled in the Terraform configuration. AWS reports the current `t3.micro` instance as `EbsOptimized = False` and lists its optimization support as `default`. The finding remains under investigation; no configuration change has been made because preserving the existing EC2 instance and website is a priority.
 - **CKV_AWS_126 - Detailed monitoring:** Deferred pending cost assessment.
 - **CKV2_AWS_11 - VPC Flow Logs:** Deferred pending cost assessment.
 
