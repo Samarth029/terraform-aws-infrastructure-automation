@@ -1,4 +1,4 @@
-﻿name: Terraform Checks
+name: Terraform Checks
 
 on:
   push:
@@ -12,10 +12,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: terraform-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   terraform:
     name: Format and Validate Terraform
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -30,7 +35,7 @@ jobs:
         run: terraform fmt -check -recursive
 
       - name: Initialize Terraform
-        run: terraform init -backend=false -input=false
+        run: terraform init -backend=false -input=false -lockfile=readonly
 
       - name: Validate Terraform configuration
-        run: terraform validate
+        run: terraform validate -no-color
