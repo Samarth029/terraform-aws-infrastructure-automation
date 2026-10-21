@@ -25,6 +25,7 @@ resource "aws_instance" "web" {
   subnet_id                   = var.subnet_id
   vpc_security_group_ids      = [var.security_group_id]
   associate_public_ip_address = true
+  iam_instance_profile        = "EC2-SSM-Role"
 
   metadata_options {
     http_endpoint               = "enabled"
