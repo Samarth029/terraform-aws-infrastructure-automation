@@ -26,6 +26,12 @@ resource "aws_instance" "web" {
   vpc_security_group_ids      = [var.security_group_id]
   associate_public_ip_address = true
 
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+
   root_block_device {
     volume_size           = 8
     volume_type           = "gp3"
