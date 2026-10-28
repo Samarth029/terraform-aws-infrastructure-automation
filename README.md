@@ -155,21 +155,25 @@ The backend helps protect state, supports recovery, and coordinates Terraform op
 
 The backend currently uses the local AWS CLI profile `terraform-dev`. Anyone adapting this configuration should configure their own AWS authentication and backend settings securely before initialization.
 
-
 ## Continuous Integration with GitHub Actions
 
-The GitHub Actions workflow automatically checks Terraform changes pushed to the repository.
+GitHub Actions automatically checks Terraform configuration changes pushed to the repository.
 
 **Pipeline checks:**
-1. **Formatting:** Runs `terraform fmt -check -recursive`.
+
+1. **Formatting:** Runs `terraform fmt -check -recursive` to verify consistent Terraform formatting.
 2. **Initialization:** Initializes Terraform with the backend disabled for CI validation.
-3. **Validation:** Runs `terraform validate`.
-4. **Security scanning:** Uses Checkov to identify potential AWS and Terraform security misconfigurations.
+3. **Validation:** Runs `terraform validate` to check Terraform configuration syntax and consistency.
+4. **Security scanning:** Uses Checkov to identify potential security misconfigurations in Terraform and AWS resources.
 
-The workflow is designed for validation and security scanning only. It does not run `terraform apply` or deploy AWS resources, and it does not require AWS deployment credentials.
+**Security and deployment policy:**
 
-**Security-scan behavior:** Checkov uses `--soft-fail`, so findings are reported without necessarily failing the entire workflow. A successful workflow does not mean every security finding has been resolved; findings must still be reviewed and addressed appropriately.
+- The workflow performs validation and security scanning only.
+- It does not run `terraform apply` or deploy AWS resources.
+- It does not require AWS deployment credentials.
+- Checkov runs with `--soft-fail`, so security findings can be reported without necessarily failing the workflow.
 
+**Important:** A successful workflow does not mean every security finding has been resolved. Review reported findings and address them according to their risk and the project's cost constraints.
 
 ## Security Practices
 
