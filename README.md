@@ -151,10 +151,6 @@ Terraform state is stored remotely in Amazon S3 instead of relying only on a loc
 
 The backend helps protect state, supports recovery, and coordinates Terraform operations that share the same state.
 
-**Important:** Terraform state can contain sensitive infrastructure details. Keep local state backups and saved plan files out of Git, and restrict access to the S3 bucket and state objects.
-
-The backend currently uses the local AWS CLI profile `terraform-dev`. Anyone adapting this configuration should configure their own AWS authentication and backend settings securely before initialization.
-
 ## Continuous Integration with GitHub Actions
 
 GitHub Actions automatically checks Terraform configuration changes pushed to the repository.
