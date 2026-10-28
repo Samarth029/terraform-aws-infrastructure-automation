@@ -241,7 +241,7 @@ Review running resources and AWS billing after testing.
 - Security group configuration
 - Terraform outputs and state-aware refactoring
 - Git version control and GitHub
-- GitHub Actions for automated Terraform formatting and validation
-- S3 remote Terraform state, versioning, encryption, and state locking
 - GitHub Actions CI for Terraform formatting, validation, and security scanning
-- Checkov findings review and cost-conscious security decisions
+- S3 remote Terraform state, versioning, encryption, and state locking
+- Checkov security findings review and cost-conscious infrastructure decisions
+- Least-privilege IAM and AWS infrastructure security practices
