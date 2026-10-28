@@ -226,10 +226,11 @@ Review running resources and AWS billing after testing.
 
 ## Future Improvements
 
-- Improve module documentation and variable configuration.
-- Explore an Application Load Balancer and Auto Scaling Group.
+- Improve Terraform module documentation, input variables, and output descriptions.
+- Explore an Application Load Balancer (ALB) and Auto Scaling Group (ASG) in a cost-conscious design.
 - Explore a private database tier, HTTPS, monitoring, and alerting.
-- Add deployment screenshots to document the project.
+- Add architecture diagrams and deployment screenshots to document project milestones.
+- Expand automated security checks and review outstanding Checkov findings.
 
 ## Learning Outcomes
 
