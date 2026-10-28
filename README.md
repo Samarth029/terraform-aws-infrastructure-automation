@@ -181,13 +181,18 @@ GitHub Actions automatically checks Terraform configuration changes pushed to th
 - Restrict network traffic to what the workload requires.
 - Do not transmit sensitive information through the sample HTTP website.
 
-
-
 ## Security Scanning and Findings
 
 This project uses Checkov in GitHub Actions to scan Terraform configuration for common AWS security misconfigurations.
 
-The CI security scan currently runs with `--soft-fail` so findings can be reviewed before security policies are made blocking.
+The CI security scan currently runs with `--soft-fail`, allowing findings to be reported and reviewed without necessarily failing the entire workflow.
+
+**How findings are handled:**
+
+- Review reported findings to understand their security impact and recommended remediation.
+- Prioritize issues based on risk, existing infrastructure requirements, and potential AWS costs.
+- Avoid disabling security checks simply to obtain a successful CI run.
+- Re-run the security scan after relevant changes to verify whether findings have been resolved.
 
 ### Verified Security Controls
 
