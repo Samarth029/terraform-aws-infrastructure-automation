@@ -136,6 +136,41 @@ terraform plan
 
 Always review a plan before approving an apply. Applying Terraform can create, modify, or destroy billable AWS resources.
 
+## Remote Terraform State
+
+Terraform state is stored remotely in Amazon S3 instead of relying only on a local state file.
+
+**Backend configuration:**
+- **Storage:** Amazon S3
+- **AWS Region:** `ap-south-1` (Mumbai)
+- **State key:** `terraform-aws-infrastructure-automation/terraform.tfstate`
+- **Encryption:** S3 server-side encryption using AES-256 (SSE-S3)
+- **Versioning:** Enabled to support recovery of previous state-object versions
+- **State locking:** S3 lockfile-based locking enabled with `use_lockfile = true`
+- **Public access:** S3 Block Public Access enabled
+
+The backend helps protect state, supports recovery, and coordinates Terraform operations that share the same state.
+
+**Important:** Terraform state can contain sensitive infrastructure details. Keep local state backups and saved plan files out of Git, and restrict access to the S3 bucket and state objects.
+
+The backend currently uses the local AWS CLI profile `terraform-dev`. Anyone adapting this configuration should configure their own AWS authentication and backend settings securely before initialization.
+
+
+## Continuous Integration with GitHub Actions
+
+The GitHub Actions workflow automatically checks Terraform changes pushed to the repository.
+
+**Pipeline checks:**
+1. **Formatting:** Runs `terraform fmt -check -recursive`.
+2. **Initialization:** Initializes Terraform with the backend disabled for CI validation.
+3. **Validation:** Runs `terraform validate`.
+4. **Security scanning:** Uses Checkov to identify potential AWS and Terraform security misconfigurations.
+
+The workflow is designed for validation and security scanning only. It does not run `terraform apply` or deploy AWS resources, and it does not require AWS deployment credentials.
+
+**Security-scan behavior:** Checkov uses `--soft-fail`, so findings are reported without necessarily failing the entire workflow. A successful workflow does not mean every security finding has been resolved; findings must still be reviewed and addressed appropriately.
+
+
 ## Security Practices
 
 - Never commit AWS credentials, access keys, passwords, or secrets.
@@ -145,6 +180,8 @@ Always review a plan before approving an apply. Applying Terraform can create, m
 - Avoid exposing SSH to the entire internet.
 - Restrict network traffic to what the workload requires.
 - Do not transmit sensitive information through the sample HTTP website.
+
+
 
 ## Security Scanning and Findings
 
@@ -185,7 +222,6 @@ Review running resources and AWS billing after testing.
 
 ## Future Improvements
 
-- Configure secure remote Terraform state storage and state locking.
 - Improve module documentation and variable configuration.
 - Explore an Application Load Balancer and Auto Scaling Group.
 - Explore a private database tier, HTTPS, monitoring, and alerting.
@@ -202,3 +238,6 @@ Review running resources and AWS billing after testing.
 - Terraform outputs and state-aware refactoring
 - Git version control and GitHub
 - GitHub Actions for automated Terraform formatting and validation
+- S3 remote Terraform state, versioning, encryption, and state locking
+- GitHub Actions CI for Terraform formatting, validation, and security scanning
+- Checkov findings review and cost-conscious security decisions
