@@ -183,16 +183,21 @@ GitHub Actions automatically checks Terraform configuration changes pushed to th
 
 ## Security Scanning and Findings
 
-This project uses Checkov in GitHub Actions to scan Terraform configuration for common AWS security misconfigurations.
+This project uses Checkov 3.3.29 to scan Terraform configuration for common AWS security misconfigurations. The GitHub Actions workflow also runs security scanning with `--soft-fail`, so findings are reported for review without necessarily failing the workflow.
 
-The CI security scan currently runs with `--soft-fail`, allowing findings to be reported and reviewed without necessarily failing the entire workflow.
+### Latest Local Scan
 
-**How findings are handled:**
+| Result | Count |
+|---|---:|
+| Passed | 35 |
+| Failed | 7 |
+| Skipped | 0 |
 
-- Review reported findings to understand their security impact and recommended remediation.
-- Prioritize issues based on risk, existing infrastructure requirements, and potential AWS costs.
-- Avoid disabling security checks simply to obtain a successful CI run.
-- Re-run the security scan after relevant changes to verify whether findings have been resolved.
+Run the scan locally using:
+
+```powershell
+checkov -d . --framework terraform --compact
+```
 
 ### Verified Security Controls
 
@@ -201,21 +206,37 @@ The CI security scan currently runs with `--soft-fail`, allowing findings to be 
 - The EC2 instance uses the `EC2-SSM-Role` instance profile.
 - The VPC default security group is restricted.
 - The web security group allows inbound HTTP on port 80 and outbound HTTPS on port 443.
+- VPC Flow Logs are enabled with a 14-day CloudWatch Logs retention period.
 
-### Findings Under Review
+### Findings and Risk Decisions
 
-The latest local Checkov scan (version 3.3.29) reports 33 passed checks and 8 failed checks, with 0 skipped checks. The scan excludes `CKV_AWS_135` using `--skip-check CKV_AWS_135`. Findings are reviewed individually rather than blindly suppressed.
+The following seven findings remain in the latest local scan. Decisions account for security, the existing deployment, and cost.
 
-- **CKV2_AWS_5 - Security group attachment:** Checkov reports that the web security group is not attached to another resource. The Terraform configuration passes `module.security.web_security_group_id` to the compute module, and the EC2 resource uses it in `vpc_security_group_ids`. The live EC2 configuration confirms the intended security group is attached. This finding remains under investigation; no infrastructure change is planned based on this finding alone.
-- **CKV_AWS_88 - Public EC2 IP:** The instance has a public IP for direct access to the demonstration website. Revisit this design when evaluating an Application Load Balancer architecture.
-- **CKV_AWS_260 - Public HTTP ingress:** Port 80 is intentionally open for the sample website. HTTP traffic is unencrypted; HTTPS is a planned future improvement.
-- **CKV_AWS_130 - Public subnet IP assignment:** The two public subnets allow automatic public IP assignment as part of the current public-web-server design. The private subnets do not automatically assign public IPs.
-- **CKV_AWS_126 - EC2 detailed monitoring:** Deferred pending cost and monitoring requirements assessment.
-- **CKV_AWS_158 - CloudWatch log group encryption:** KMS encryption is under review, including its cost implications.
-- **CKV_AWS_338 - CloudWatch log retention:** The Flow Logs group currently uses 14-day retention as a cost-conscious setting rather than the 365-day retention Checkov recommends.
-- **CKV_AWS_135 - EBS optimization:** Excluded from the latest local scan using `--skip-check CKV_AWS_135`. The existing instance's optimization status and support were previously investigated; no configuration change has been made.
+| Check ID | Finding | Current decision |
+|---|---|---|
+| CKV_AWS_126 | EC2 detailed monitoring disabled | Deferred pending monitoring and cost review |
+| CKV_AWS_135 | EC2 EBS optimization | Deferred because enabling it previously proposed replacing the existing instance |
+| CKV_AWS_88 | EC2 has a public IP | Retained for the current public web-server design |
+| CKV_AWS_158 | CloudWatch Logs customer-managed KMS key | Deferred pending encryption and cost review |
+| CKV_AWS_338 | Log retention below 365 days | Retained at 14 days to limit storage costs |
+| CKV_AWS_260 | Public HTTP ingress on port 80 | Retained for the current demonstration; HTTP does not encrypt traffic |
+| CKV2_AWS_5 | Security-group attachment not detected by Checkov | AWS inspection confirmed attachment to EC2; investigate the static-analysis finding further |
 
-VPC Flow Logs are enabled and their delivery status has been verified. The CloudWatch log group uses 14-day retention. Findings are reviewed individually, and changes to existing AWS resources are made only after reviewing the Terraform plan and considering availability, security, and cost.
+### Infrastructure Safety
+
+- `terraform fmt -check -recursive` completed successfully.
+- `terraform validate` completed successfully.
+- The latest `terraform plan -no-color` reported no changes.
+- No `terraform apply` or `terraform destroy` was performed during this review.
+- The existing EC2 instance and its `user_data` configuration were preserved.
+- Changes that could replace or disrupt the existing instance were not applied.
+
+### Future Security Improvements
+
+- Consider HTTPS through a public Application Load Balancer and a private EC2 instance.
+- Reassess monitoring and log-retention requirements against budget and operational needs.
+- Investigate the Checkov security-group graph finding further.
+- Review the Terraform plan before approving infrastructure changes.
 
 ## Cost Considerations
 
