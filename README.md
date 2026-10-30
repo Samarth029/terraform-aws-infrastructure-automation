@@ -120,6 +120,15 @@ You also need an AWS account with appropriate permissions.
 
 Configure the AWS CLI using a dedicated IAM identity with least-privilege permissions. Avoid using root-user access keys.
 
+### Configure Terraform Variables
+
+Create a local `terraform.tfvars` file using the example:
+
+```powershell
+Copy-Item terraform.tfvars.example terraform.tfvars
+```
+Customize the values in `terraform.tfvars` for your environment. This file is excluded from Git to prevent environment-specific configuration from being committed.
+
 ## Validate the Configuration
 
 ### 1. Format Terraform files
