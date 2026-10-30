@@ -254,7 +254,7 @@ The following seven findings remain in the latest recorded local scan. Decisions
 | `CKV_AWS_158` | CloudWatch Logs customer-managed KMS key | Deferred pending encryption and cost review |
 | `CKV_AWS_338` | Log retention below 365 days | Retained at 14 days to limit storage costs |
 | `CKV_AWS_260` | Public HTTP ingress on port 80 | Retained for the current demonstration; HTTP does not encrypt traffic |
-| `CKV2_AWS_5` | Security-group attachment not detected by Checkov | AWS inspection confirmed attachment to EC2; investigate the static-analysis finding further |
+| `CKV2_AWS_5` | Security-group attachment not detected by Checkov | Terraform configuration, Terraform state, and live AWS inspection confirm attachment; likely cross-module static-analysis limitation |
 
 These decisions document the current trade-offs; they do not mean every finding has been fixed or that the current architecture is suitable for production.
 
