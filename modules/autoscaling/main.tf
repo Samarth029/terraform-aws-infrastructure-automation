@@ -1,3 +1,4 @@
+
 variable "project_name" {
   description = "Name used to identify project resources"
   type        = string
@@ -19,6 +20,21 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
+variable "public_subnet_ids" {
+  description = "Public subnet IDs for Auto Scaling instances"
+  type        = list(string)
+}
+
+variable "target_group_arn" {
+  description = "ALB target group ARN"
+  type        = string
+}
+
+variable "notification_email" {
+  description = "Email address for CloudWatch alarm notifications"
+  type        = string
+}
+
 # Security group for application instances
 resource "aws_security_group" "app" {
   name        = "${var.project_name}-app-sg"
@@ -34,10 +50,18 @@ resource "aws_security_group" "app" {
   }
 
   egress {
-    description = "Allow outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "Allow outbound HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow outbound HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -85,16 +109,6 @@ resource "aws_launch_template" "app" {
   }
 }
 
-variable "public_subnet_ids" {
-  description = "Public subnet IDs for Auto Scaling instances"
-  type        = list(string)
-}
-
-variable "target_group_arn" {
-  description = "ALB target group ARN"
-  type        = string
-}
-
 # Auto Scaling Group
 resource "aws_autoscaling_group" "app" {
   name                = "${var.project_name}-asg"
@@ -123,9 +137,4 @@ resource "aws_autoscaling_group" "app" {
     value               = var.project_name
     propagate_at_launch = true
   }
-}
-
-variable "notification_email" {
-  description = "Email address for CloudWatch alarm notifications"
-  type        = string
 }

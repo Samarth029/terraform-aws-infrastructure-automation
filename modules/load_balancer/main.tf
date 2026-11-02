@@ -1,3 +1,4 @@
+
 variable "project_name" {
   description = "Name used to identify project resources"
   type        = string
@@ -8,6 +9,12 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "public_subnet_ids" {
+  description = "IDs of the existing public subnets for the ALB"
+  type        = list(string)
+}
+
+# Security group for Application Load Balancer
 resource "aws_security_group" "alb" {
   name        = "${var.project_name}-alb-sg"
   description = "Allow public HTTP and HTTPS traffic to the ALB"
@@ -22,22 +29,17 @@ resource "aws_security_group" "alb" {
   }
 
   egress {
-    description = "Allow outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTP traffic to application instances within the VPC"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
   }
 
   tags = {
     Name    = "${var.project_name}-alb-sg"
     Project = var.project_name
   }
-}
-
-variable "public_subnet_ids" {
-  description = "IDs of the existing public subnets for the ALB"
-  type        = list(string)
 }
 
 # Application Load Balancer
@@ -52,7 +54,8 @@ resource "aws_lb" "main" {
 
   subnets = var.public_subnet_ids
 
-  enable_deletion_protection = false
+  enable_deletion_protection = true
+  drop_invalid_header_fields = true
 
   tags = {
     Name    = "${var.project_name}-alb"

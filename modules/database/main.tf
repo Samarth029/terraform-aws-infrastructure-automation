@@ -1,3 +1,4 @@
+
 variable "project_name" {
   description = "Name used to identify project resources"
   type        = string
@@ -24,6 +25,16 @@ variable "db_name" {
   default     = "appdb"
 }
 
+# AWS-managed KMS key for RDS storage encryption
+data "aws_kms_key" "rds" {
+  key_id = "alias/aws/rds"
+}
+
+# AWS-managed KMS key for Secrets Manager encryption
+data "aws_kms_key" "secretsmanager" {
+  key_id = "alias/aws/secretsmanager"
+}
+
 # Security group for RDS
 resource "aws_security_group" "database" {
   name        = "${var.project_name}-database-sg"
@@ -38,13 +49,8 @@ resource "aws_security_group" "database" {
     security_groups = [var.app_security_group_id]
   }
 
-  egress {
-    description = "Allow outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  # No outbound rules required for this database security group
+  egress = []
 
   tags = {
     Name    = "${var.project_name}-database-sg"
@@ -74,7 +80,8 @@ resource "aws_db_instance" "main" {
   db_name  = var.db_name
   username = "dbadmin"
 
-  manage_master_user_password = true
+  manage_master_user_password   = true
+  master_user_secret_kms_key_id = data.aws_kms_key.secretsmanager.arn
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.database.id]
@@ -82,6 +89,7 @@ resource "aws_db_instance" "main" {
   publicly_accessible = false
   multi_az            = false
   storage_encrypted   = true
+  kms_key_id          = data.aws_kms_key.rds.arn
 
   backup_retention_period    = 1
   auto_minor_version_upgrade = true

@@ -1,317 +1,464 @@
 # Terraform AWS Infrastructure Automation
 
-A modular Infrastructure as Code (IaC) project using Terraform to manage AWS networking, security, and compute resources.
+A modular Infrastructure as Code (IaC) project that provisions and manages AWS infrastructure using Terraform. This project demonstrates AWS networking, compute, load balancing, auto scaling, database provisioning, security hardening, remote state management, and automated CI validation.
 
 ## Overview
 
-This project demonstrates reusable Terraform modules, AWS network design, EC2 provisioning, remote state management, security scanning, and version control with Git and GitHub.
+This project demonstrates how to design and manage a multi-tier AWS infrastructure using reusable Terraform modules.
+
+The infrastructure includes:
+
+- Custom AWS VPC with public and private subnets across two Availability Zones.
+- Internet Gateway and separate routing configurations.
+- Application Load Balancer (ALB).
+- EC2 Auto Scaling Group (ASG) with launch template and target tracking.
+- Existing standalone EC2 web server.
+- Private MySQL RDS database.
+- VPC Flow Logs and CloudWatch monitoring.
+- SNS notifications for monitoring alerts.
+- S3 remote Terraform state with encryption, versioning, and lockfile-based locking.
+- GitHub Actions CI for Terraform validation and Checkov security scanning.
+
+The project prioritizes security, infrastructure reliability, modularity, and cost-conscious AWS resource selection.
 
 ## Architecture
 
-- **VPC:** `10.0.0.0/16`
-- **Public subnets:** Two subnets across Availability Zones.
-- **Private subnets:** Two subnets reserved for future private workloads.
-- **Internet Gateway:** Internet routing for public subnets.
-- **Route tables:** Separate public and private routing configurations.
-- **Security group:** Allows inbound HTTP traffic on port 80 and outbound HTTPS traffic on port 443.
-- **EC2:** Runs an Apache web server serving a sample HTML page.
-
-### Architecture Diagram
-
 ```mermaid
 flowchart TB
-    Internet([Internet]) -->|HTTP : 80| IGW[Internet Gateway]
+    Internet([Internet]) -->|HTTP :80| ALB
 
     subgraph VPC["AWS VPC - 10.0.0.0/16"]
-        subgraph PublicA["Public Subnet A - 10.0.1.0/24"]
-            SG[Web Security Group]
-            EC2["EC2 t3.micro<br/>Apache Web Server"]
-            SG --> EC2
+        subgraph Public["Public Subnets"]
+            ALB["Application Load Balancer"]
+            TG["Target Group"]
+            ASG["Auto Scaling Group"]
+            APP1["Current ASG EC2 Instance"]
+            APP2["Potential Second EC2 Instance"]
+            EC2["Standalone EC2 Web Server"]
         end
 
-        subgraph PublicB["Public Subnet B - 10.0.2.0/24"]
-            PUBB[Available public subnet]
+        subgraph Private["Private Subnets"]
+            RDS[("MySQL RDS Database")]
         end
 
-        subgraph PrivateA["Private Subnet A - 10.0.11.0/24"]
-            PRIVA[Reserved for future workloads]
-        end
-
-        subgraph PrivateB["Private Subnet B - 10.0.12.0/24"]
-            PRIVB[Reserved for future workloads]
-        end
-
-        IGW --> PublicA
+        ALB --> TG
+        TG --> APP1
+        TG -.->|When scaled out| APP2
+        ASG -.-> APP1
+        ASG -.-> APP2
+        APP1 -.->|Future integration| RDS
     end
 
-    EC2 --> Website[Sample HTTP Website]
+    subgraph Monitoring["Monitoring and Notifications"]
+        FLOW["VPC Flow Logs"]
+        CW["CloudWatch"]
+        SNS["SNS Notifications"]
+    end
 
-    classDef active fill:#d9ead3,stroke:#38761d,color:#000
-    classDef planned fill:#eeeeee,stroke:#666666,color:#000
-
-    class EC2,SG,IGW active
-    class PUBB,PRIVA,PRIVB planned
+    VPC --> FLOW
+    FLOW --> CW
+    CW --> SNS
 ```
+**Current architecture notes:**
 
-**Current deployment:** One EC2 instance serves the sample website over HTTP. The other subnets are configured but do not currently host workloads. An Application Load Balancer, Auto Scaling Group, database, NAT Gateway, and HTTPS endpoint are not currently deployed.
+- The public ALB distributes HTTP traffic to the Auto Scaling application instances.
+- The ASG currently maintains one desired EC2 instance and can scale up to two.
+- A separate standalone EC2 web server is preserved.
+- The MySQL RDS database is provisioned in private subnets but is not yet connected to the application.
+- The private subnets do not use a NAT Gateway.
+- ASG instances currently use public IP addresses for outbound access without a NAT Gateway.
+- HTTPS, WAF, and NAT-based private outbound connectivity are not currently implemented.
 
 ## Technologies Used
 
 - Terraform
 - Amazon Web Services (AWS)
-- Amazon VPC and EC2
-- AWS IAM and Security Groups
+- Amazon VPC
+- Amazon EC2
+- Application Load Balancer
+- Auto Scaling Groups
+- Amazon RDS (MySQL)
+- AWS IAM
+- AWS Security Groups
+- Amazon S3
+- Amazon CloudWatch
+- Amazon SNS
 - AWS CLI
 - Git and GitHub
-- Windows PowerShell
 - GitHub Actions
 - Checkov
+- Windows PowerShell
 
 ## Project Structure
 
 ```text
 terraform-aws-infrastructure-automation/
+|
 |-- .github/
 |   `-- workflows/
 |       `-- terraform-ci.yml
+|
 |-- modules/
 |   |-- network/
-|   |   |-- main.tf
-|   |   `-- outputs.tf
 |   |-- security/
-|   |   |-- main.tf
-|   |   `-- outputs.tf
-|   `-- compute/
-|       |-- main.tf
-|       `-- outputs.tf
+|   |-- compute/
+|   |-- load_balancer/
+|   |-- autoscaling/
+|   `-- database/
+|
+|-- docs/
+|-- screenshots/
+|
 |-- .gitignore
 |-- .terraform.lock.hcl
 |-- main.tf
 |-- outputs.tf
 |-- providers.tf
-|-- terraform.tfvars.example
 |-- variables.tf
-`-- versions.tf
+|-- versions.tf
+|-- terraform.tfvars.example
+`-- README.md
 ```
 
-## Terraform Modules
+## Infrastructure Components
 
-### Network
+### 1. Networking Module
 
-Manages the VPC, public and private subnets, Internet Gateway, route tables, and subnet associations.
+Manages:
 
-### Security
+- Custom VPC (`10.0.0.0/16`).
+- Two public subnets.
+- Two private subnets.
+- Internet Gateway.
+- Public and private route tables.
+- Route table associations.
+- VPC Flow Logs.
 
-Manages the web server security group and its network access rules.
+### 2. Security Module
 
-### Compute
+Manages the security group for the existing standalone web server.
 
-Manages the EC2 instance, instance type, subnet, security group, encrypted root volume, and Apache web server setup.
+Security configuration:
 
-## Prerequisites
+- Inbound HTTP traffic on port 80.
+- Outbound HTTPS traffic on port 443.
+- VPC association.
+- Resource tagging.
 
-Install the following tools:
+### 3. Compute Module
+
+Provisions the existing standalone EC2 web server.
+
+Configuration includes:
+
+- Amazon Linux 2023.
+- t3.micro instance type.
+- Encrypted gp3 root EBS volume.
+- EC2 instance profile for Systems Manager access.
+- IMDSv2 required.
+- Apache web server installation through the original user data configuration.
+
+The existing EC2 instance and its user data are preserved.
+
+### 4. Load Balancer Module
+
+Provisions an internet-facing Application Load Balancer.
+
+Security and configuration controls:
+
+- Public subnet placement.
+- HTTP listener on port 80.
+- Target group using HTTP port 80.
+- Deletion protection enabled.
+- Invalid HTTP header fields dropped.
+- ALB security group ingress restricted to the intended public HTTP service.
+- ALB security group egress restricted to application traffic within the VPC.
+
+HTTPS is a future improvement requiring a domain and an ACM certificate.
+
+### 5. Auto Scaling Module
+
+Manages:
+
+- EC2 launch template.
+- Auto Scaling Group.
+- Application security group.
+- Load balancer target group attachment.
+- ELB health checks.
+- CPU-based target tracking scaling policy.
+- CloudWatch CPU alarm.
+- SNS email notifications.
+
+Current scaling configuration:
+
+| Setting | Value |
+|---|---:|
+| Minimum capacity | 1 |
+| Desired capacity | 1 |
+| Maximum capacity | 2 |
+| Instance type | t3.micro |
+| CPU target tracking | 50% |
+
+Application instances accept HTTP traffic from the ALB security group rather than directly from the public internet.
+
+### 6. Database Module
+
+Provisions a private Amazon RDS MySQL database.
+
+Configuration:
+
+- db.t3.micro instance class.
+- 20 GB gp3 storage.
+- Storage encryption enabled.
+- Private subnet placement.
+- Public accessibility disabled.
+- One-day backup retention.
+- AWS-managed master password.
+- Deletion protection enabled.
+- Final snapshot required.
+
+The database is provisioned but application integration is planned for a future stage.
+
+## Remote Terraform State
+
+Terraform state is stored in an Amazon S3 backend.
+
+Configuration:
+
+| Property | Setting |
+|---|---|
+| Storage | Amazon S3 |
+| Region | ap-south-1 (Mumbai) |
+| State key | terraform-aws-infrastructure-automation/terraform.tfstate |
+| Encryption | SSE-S3 |
+| Versioning | Enabled |
+| State locking | S3 lockfile |
+| Public access | Blocked |
+
+Remote state supports shared state management, recovery through versioning, and coordinated Terraform operations.
+
+**Important:** Terraform state may contain sensitive infrastructure information. Never commit state files or saved plans to GitHub.
+
+## Continuous Integration with GitHub Actions
+
+GitHub Actions automatically validates Terraform changes pushed to the repository.
+
+### Pipeline checks
+
+1. Terraform formatting.
+2. Terraform initialization with backend disabled.
+3. Terraform validation.
+4. Checkov security scanning.
+
+### Deployment policy
+
+The workflow performs validation and security scanning only.
+
+It does not:
+
+- Deploy AWS infrastructure.
+- Execute `terraform apply`.
+- Execute `terraform destroy`.
+- Require AWS deployment credentials.
+
+Checkov runs with `--soft-fail`, allowing findings to be reported without necessarily failing the workflow.
+
+A successful CI run does not mean all security findings have been resolved.
+
+## Security Practices
+
+Implemented security controls include:
+
+- Encrypted EC2 root EBS volume.
+- IMDSv2 required for EC2 metadata.
+- IAM instance profile for Systems Manager access.
+- Restricted default VPC security group.
+- Restricted application security group ingress.
+- Restricted ALB security group egress.
+- Restricted database security group egress.
+- RDS storage encryption.
+- Private RDS subnet placement.
+- RDS deletion protection.
+- ALB deletion protection.
+- ALB invalid-header protection.
+- SNS topic encryption using an AWS-managed key.
+- VPC Flow Logs.
+- S3 remote state encryption and versioning.
+- GitHub Actions validation and Checkov scanning.
+
+## Checkov Security Scan
+
+The project uses Checkov 3.3.29 to identify potential Terraform and AWS security misconfigurations.
+
+### Latest recorded local scan
+
+| Result | Count |
+|---|---:|
+| Passed | 78 |
+| Failed | 19 |
+| Skipped | 0 |
+
+Run a local scan using:
+
+```powershell
+checkov -d . --framework terraform
+```
+
+### Remaining findings
+
+The remaining findings include:
+
+- EC2 detailed monitoring.
+- EC2 EBS optimization.
+- Public IP configuration.
+- RDS logging and enhanced monitoring.
+- RDS IAM authentication.
+- RDS Multi-AZ configuration.
+- Public HTTP access to the ALB.
+- ALB access logging.
+- HTTPS and TLS configuration.
+- CloudWatch Logs KMS encryption.
+- CloudWatch log retention.
+- WAF protection.
+- Security-group attachment detection.
+
+### Risk decisions
+
+Not every Checkov recommendation requires an immediate infrastructure change.
+
+Some controls are intentionally deferred because they require additional AWS costs, architectural changes, or operational integration.
+
+For example:
+
+- HTTPS requires a suitable domain and ACM certificate.
+- WAF introduces additional costs.
+- Multi-AZ RDS increases database costs.
+- Longer CloudWatch retention increases storage costs.
+- Enhanced monitoring may introduce additional charges.
+- The current public IP configuration is part of the no-NAT cost-conscious design.
+- The security-group attachment finding has been verified against Terraform configuration, Terraform state, and live AWS attachment data.
+
+The project prioritizes documented security decisions rather than changing working infrastructure solely to achieve a zero-finding Checkov report.
+
+**Note:** The recorded scan result is a snapshot. Run Checkov again before publishing if the infrastructure configuration changes.
+
+## Cost Considerations
+
+AWS resources may incur charges even when using Free Tier-eligible services.
+
+The architecture avoids certain additional-cost services:
+
+- NAT Gateway.
+- AWS WAF.
+- RDS Multi-AZ.
+- Unnecessary long-term CloudWatch retention.
+- Additional monitoring services without an established requirement.
+
+The ASG instances use public IP addresses because the project currently does not use a NAT Gateway.
+
+This is a cost-conscious design compromise rather than the preferred isolation model for a production application.
+
+Check AWS pricing, Free Tier eligibility, and billing before provisioning or changing resources.
+
+## Deployment and Validation
+
+### Prerequisites
+
+Install:
 
 - [Terraform](https://developer.hashicorp.com/terraform/install)
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 - [Git](https://git-scm.com/downloads)
+- [Checkov](https://www.checkov.io/)
 
-You also need an AWS account with appropriate permissions.
+Configure AWS CLI with a dedicated IAM identity using least-privilege permissions. Avoid using root-user access keys.
 
-Configure the AWS CLI using a dedicated IAM identity with least-privilege permissions. Avoid using root-user access keys.
+### Configure variables
 
-### Configure Terraform Variables
-
-Create a local `terraform.tfvars` file using the example:
+Create a local Terraform variables file:
 
 ```powershell
 Copy-Item terraform.tfvars.example terraform.tfvars
 ```
-Customize the values in `terraform.tfvars` for your environment. This file is excluded from Git to prevent environment-specific configuration from being committed.
 
-## Validate the Configuration
+Update the values for your environment.
 
-### 1. Format Terraform files
+The actual `terraform.tfvars` file is excluded from Git.
 
-Format Terraform files when you intentionally want to apply formatting:
+### Initialize Terraform
 
-```bash
-terraform fmt -recursive
-```
-
-To check formatting without modifying files:
-
-```bash
-terraform fmt -check -recursive
-```
-
-### 2. Initialize Terraform
-
-Initialize Terraform locally using your configured AWS credentials and S3 backend:
-
-```bash
+```powershell
 terraform init
 ```
 
-### 3. Validate Terraform configuration
+### Format and validate
 
-Check the configuration for syntax and internal consistency errors:
-
-```bash
+```powershell
+terraform fmt -check -recursive
 terraform validate
 ```
 
-### 4. Preview infrastructure changes
+### Preview infrastructure changes
 
-Review the proposed changes before making any infrastructure modifications:
-
-```bash
+```powershell
 terraform plan
 ```
 
-**Safety rule:** Review the plan carefully before approving any infrastructure changes. Do not run `terraform apply` or `terraform destroy` without reviewing the proposed actions and explicitly approving them.
+Always review the complete Terraform plan before approving infrastructure changes.
 
-In GitHub Actions, initialization uses `terraform init -backend=false -input=false` because the CI job validates the configuration without accessing or modifying remote Terraform state.
+Never run `terraform apply` or `terraform destroy` without understanding and explicitly approving the proposed actions.
 
-## Remote Terraform State
+## Infrastructure Safety
 
-Terraform state is stored remotely in Amazon S3 instead of relying only on a local state file.
+The project follows these safety practices:
 
-**Backend configuration:**
+- Existing standalone EC2 instance preserved.
+- Existing EC2 user data preserved.
+- RDS deletion protection enabled.
+- RDS final snapshot required.
+- ALB deletion protection enabled.
+- Terraform remote state retained.
+- Infrastructure changes reviewed through Terraform plans.
+- No deployment performed through the validation-only GitHub Actions workflow.
 
-- **Storage:** Amazon S3
-- **AWS Region:** `ap-south-1` (Mumbai)
-- **State key:** `terraform-aws-infrastructure-automation/terraform.tfstate`
-- **Encryption:** S3 server-side encryption using AES-256 (SSE-S3)
-- **Versioning:** Enabled to support recovery of previous state-object versions
-- **State locking:** S3 lockfile-based locking enabled with `use_lockfile = true`
-- **Public access:** S3 Block Public Access enabled
-
-The backend helps protect state, supports recovery, and coordinates Terraform operations that share the same state.
-
-**Important:** Terraform state can contain sensitive information. Never commit state files to GitHub or share them publicly.
-
-## Continuous Integration with GitHub Actions
-
-GitHub Actions automatically checks Terraform configuration changes pushed to the repository.
-
-**Pipeline checks:**
-
-1. **Formatting:** Runs `terraform fmt -check -recursive` to verify consistent Terraform formatting.
-2. **Initialization:** Initializes Terraform with the backend disabled for CI validation.
-3. **Validation:** Runs `terraform validate` to check Terraform configuration syntax and consistency.
-4. **Security scanning:** Uses Checkov to identify potential security misconfigurations in Terraform and AWS resources.
-
-### Security and Deployment Policy
-
-- The workflow performs validation and security scanning only.
-- It does not run `terraform apply` or deploy AWS resources.
-- It does not require AWS deployment credentials.
-- Checkov runs with `--soft-fail`, so security findings can be reported without necessarily failing the workflow.
-
-**Important:** A successful workflow does not mean every security finding has been resolved. Review reported findings and address them according to their risk and the project's cost constraints.
-
-## Security Practices
-
-- Never commit AWS credentials, access keys, passwords, or secrets.
-- Keep Terraform state files, saved plans, and local backups out of Git.
-- Use least-privilege IAM permissions.
-- Encrypt the EC2 root EBS volume.
-- Require IMDSv2 for EC2 instance metadata access.
-- Avoid exposing SSH to the entire internet.
-- Restrict network traffic to what the workload requires.
-- Do not transmit sensitive information through the sample HTTP website.
-- Review Terraform plans before approving infrastructure changes.
-- Check AWS billing and resource usage during and after testing.
-
-## Security Scanning and Findings
-
-This project uses Checkov 3.3.29 to scan Terraform configuration for common AWS security misconfigurations. The GitHub Actions workflow also runs security scanning with `--soft-fail`, so findings are reported for review without necessarily failing the workflow.
-
-### Latest Local Scan
-
-| Result | Count |
-|---|---:|
-| Passed | 35 |
-| Failed | 7 |
-| Skipped | 0 |
-
-Run the scan locally using:
-
-```powershell
-checkov -d . --framework terraform --compact
-```
-
-### Verified Security Controls
-
-- EC2 root EBS volume encryption is enabled.
-- EC2 Instance Metadata Service Version 2 (IMDSv2) is required.
-- The EC2 instance uses the `EC2-SSM-Role` instance profile.
-- The VPC default security group is restricted.
-- The web security group allows inbound HTTP on port 80 and outbound HTTPS on port 443.
-- VPC Flow Logs are enabled with a 14-day CloudWatch Logs retention period.
-
-### Findings and Risk Decisions
-
-The following seven findings remain in the latest recorded local scan. Decisions account for security, the existing deployment, and cost.
-
-| Check ID | Finding | Current decision |
-|---|---|---|
-| `CKV_AWS_126` | EC2 detailed monitoring disabled | Deferred pending monitoring and cost review |
-| `CKV_AWS_135` | EC2 EBS optimization | Deferred because enabling it previously proposed replacing the existing instance |
-| `CKV_AWS_88` | EC2 has a public IP | Retained for the current public web-server design |
-| `CKV_AWS_158` | CloudWatch Logs customer-managed KMS key | Deferred pending encryption and cost review |
-| `CKV_AWS_338` | Log retention below 365 days | Retained at 14 days to limit storage costs |
-| `CKV_AWS_260` | Public HTTP ingress on port 80 | Retained for the current demonstration; HTTP does not encrypt traffic |
-| `CKV2_AWS_5` | Security-group attachment not detected by Checkov | Terraform configuration, Terraform state, and live AWS inspection confirm attachment; likely cross-module static-analysis limitation |
-
-These decisions document the current trade-offs; they do not mean every finding has been fixed or that the current architecture is suitable for production.
-
-### Infrastructure Safety
-
-- `terraform fmt -check -recursive` completed successfully.
-- `terraform validate` completed successfully.
-- The latest `terraform plan -no-color` reported no changes.
-- No `terraform apply` or `terraform destroy` was performed during this review.
-- The existing EC2 instance and its `user_data` configuration were preserved.
-- Changes that could replace or disrupt the existing instance were not applied.
-
-### Future Security Improvements
-
-- Consider HTTPS through a public Application Load Balancer and a private EC2 instance.
-- Reassess monitoring and log-retention requirements against budget and operational needs.
-- Investigate the Checkov security-group graph finding further.
-- Review the Terraform plan before approving infrastructure changes.
-
-## Cost Considerations
-
-AWS usage is not guaranteed to be free. Check current pricing and your account's Free Tier eligibility before provisioning resources. EC2, public IPv4 addresses, storage, logging, and data transfer may incur charges.
-
-The private subnets do not use a NAT Gateway, avoiding NAT Gateway charges but also providing no NAT-based outbound internet access for private workloads.
-
-Review running resources and AWS billing after testing. Do not enable additional services solely to make Checkov pass without assessing their cost and operational value.
+Destroying database resources or changing protected infrastructure requires careful planning and explicit approval.
 
 ## Future Improvements
 
-- Improve Terraform module documentation, input variables, and output descriptions where needed.
-- Evaluate an Application Load Balancer (ALB) and Auto Scaling Group (ASG) in a cost-conscious architecture.
-- Explore a private database tier and HTTPS using an appropriate architecture and security review.
-- Assess monitoring, alerting, and log-retention requirements against operational needs and budget.
-- Investigate the Checkov security-group attachment finding and review the remaining security findings.
-- Add architecture diagrams, successful CI results, and deployment evidence to document project milestones.
-- Review every proposed Terraform plan before approving infrastructure changes.
+Potential future enhancements include:
+
+- HTTPS using ACM certificates.
+- Private application instances with an appropriate outbound connectivity design.
+- Application-to-RDS integration.
+- Additional monitoring and alerting.
+- Improved log management.
+- Further Checkov finding remediation.
+- Additional Terraform module documentation.
+- More automated infrastructure testing.
+
+Any future enhancements should be evaluated for cost, security, and operational impact before implementation.
 
 ## Learning Outcomes
 
-- Infrastructure as Code using Terraform
-- Reusable Terraform modules
-- AWS VPC and subnet design
-- Public and private routing
-- EC2 provisioning and web server deployment
-- Security group configuration
-- Terraform outputs and state-aware refactoring
-- Git version control and GitHub
-- GitHub Actions CI for Terraform formatting, validation, and security scanning
-- S3 remote Terraform state, versioning, encryption, and state locking
-- Checkov security findings review and cost-conscious infrastructure decisions
-- Least-privilege IAM and AWS infrastructure security practices
+This project demonstrates practical experience with:
+
+- Infrastructure as Code.
+- Terraform modules and outputs.
+- AWS VPC and subnet design.
+- EC2 provisioning.
+- Application Load Balancing.
+- Auto Scaling Groups.
+- RDS database provisioning.
+- IAM and security groups.
+- CloudWatch monitoring.
+- SNS notifications.
+- S3 remote Terraform state.
+- Terraform state management and refactoring.
+- Git and GitHub.
+- GitHub Actions CI.
+- Checkov security scanning.
+- Cost-conscious AWS architecture decisions.
+
+---
+
+**Project focus:** Building secure, modular, maintainable, and cost-conscious AWS infrastructure using Terraform.

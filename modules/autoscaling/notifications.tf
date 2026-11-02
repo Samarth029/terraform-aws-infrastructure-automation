@@ -1,6 +1,13 @@
+
+# AWS-managed KMS key for SNS encryption
+data "aws_kms_key" "sns" {
+  key_id = "alias/aws/sns"
+}
+
 # SNS topic for Auto Scaling CloudWatch alarm notifications
 resource "aws_sns_topic" "asg_alerts" {
-  name = "${var.project_name}-asg-alerts"
+  name              = "${var.project_name}-asg-alerts"
+  kms_master_key_id = data.aws_kms_key.sns.arn
 
   tags = {
     Name    = "${var.project_name}-asg-alerts"
