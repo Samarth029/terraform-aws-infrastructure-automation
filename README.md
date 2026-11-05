@@ -174,8 +174,6 @@ Security and configuration controls:
 - ALB security group ingress restricted to the intended public HTTP service.
 - ALB security group egress restricted to application traffic within the VPC.
 
-HTTPS is a future improvement requiring a domain and an ACM certificate.
-
 ### 5. Auto Scaling Module
 
 Manages:
@@ -236,8 +234,6 @@ Configuration:
 | Public access | Blocked |
 
 Remote state supports shared state management, recovery through versioning, and coordinated Terraform operations.
-
-**Important:** Terraform state may contain sensitive infrastructure information. Never commit state files or saved plans to GitHub.
 
 ## Continuous Integration with GitHub Actions
 
@@ -338,10 +334,6 @@ For example:
 - The current public IP configuration is part of the no-NAT cost-conscious design.
 - The security-group attachment finding has been verified against Terraform configuration, Terraform state, and live AWS attachment data.
 
-The project prioritizes documented security decisions rather than changing working infrastructure solely to achieve a zero-finding Checkov report.
-
-**Note:** The recorded scan result is a snapshot. Run Checkov again before publishing if the infrastructure configuration changes.
-
 ## Cost Considerations
 
 AWS resources may incur charges even when using Free Tier-eligible services.
@@ -357,8 +349,6 @@ The architecture avoids certain additional-cost services:
 The ASG instances use public IP addresses because the project currently does not use a NAT Gateway.
 
 This is a cost-conscious design compromise rather than the preferred isolation model for a production application.
-
-Check AWS pricing, Free Tier eligibility, and billing before provisioning or changing resources.
 
 ## Deployment and Validation
 
@@ -404,10 +394,6 @@ terraform validate
 terraform plan
 ```
 
-Always review the complete Terraform plan before approving infrastructure changes.
-
-Never run `terraform apply` or `terraform destroy` without understanding and explicitly approving the proposed actions.
-
 ## Infrastructure Safety
 
 The project follows these safety practices:
@@ -421,8 +407,6 @@ The project follows these safety practices:
 - Infrastructure changes reviewed through Terraform plans.
 - No deployment performed through the validation-only GitHub Actions workflow.
 
-Destroying database resources or changing protected infrastructure requires careful planning and explicit approval.
-
 ## Future Improvements
 
 Potential future enhancements include:
@@ -435,8 +419,6 @@ Potential future enhancements include:
 - Further Checkov finding remediation.
 - Additional Terraform module documentation.
 - More automated infrastructure testing.
-
-Any future enhancements should be evaluated for cost, security, and operational impact before implementation.
 
 ## Learning Outcomes
 
